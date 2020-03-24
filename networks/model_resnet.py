@@ -86,10 +86,15 @@ class ResBlockGenerator(nn.Module):
         return x + self.bypass(inp)
 
 class Generator(nn.Module):
-    def __init__(self, nf, z_dim):
+    def __init__(self, nf, z_dim, use_nfl=True):
         super(Generator, self).__init__()
         self.z_dim = z_dim
         self.nf = nf
+        self.use_nfl = use_nfl
+        if use_nfl:
+            print('using nfl!')
+            from attentive_densenet import AttentiveDensenet
+            self.ad = AttentiveDensenet(layer_channels=[nf,nf,nf,nf], key_size=16, val_size=16, n_heads=4)
 
         self.dense = nn.Linear(self.z_dim, 4 * 4 * nf)
         self.final = nn.Conv2d(nf, channels, 3, stride=1, padding=1)
@@ -108,11 +113,21 @@ class Generator(nn.Module):
 
 
     def forward(self, z):
+        self.ad.reset()
+        
         #return self.model(self.dense(z).view(-1, GEN_SIZE, 4, 4))
         x = self.dense(z).view(-1, self.nf, 4, 4)
+        if self.use_nfl:
+            x = self.ad(x,True,True)
         x = self.rbn1(x)
+        if self.use_nfl:
+            x = self.ad(x,True,True)
         x = self.rbn2(x)
+        if self.use_nfl:
+            x = self.ad(x,True,True)
         x = self.rbn3(x)
+        if self.use_nfl:
+            x = self.ad(x,True,True)
         x = self.bn(x)
         x = self.relu(x)
         x = self.final(x)
