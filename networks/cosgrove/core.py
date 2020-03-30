@@ -225,42 +225,66 @@ class Generator(nn.Module):
 
         if use_nfl:
             print('using nfl!')
-            from attentive_densenet import AttentiveDensenet
-            self.ad = AttentiveDensenet(layer_channels=[nf,nf,nf,nf], key_size=16, val_size=16, n_heads=4)
-
+            from networks.cosgrove.attentive_densenet import AttentiveDensenet
+            self.ad = AttentiveDensenet(layer_channels=[nf,nf,nf,nf,nf,nf], key_size=32, val_size=32, n_heads=4)
 
         self.dense = nn.Linear(self.z_dim, 4 * 4 * nf)
-        self.final = nn.Conv2d(nf, channels, 3, stride=1, padding=1)
+        #self.final = nn.Conv2d(nf, channels, 3, stride=1, padding=1)
         nn.init.xavier_uniform(self.dense.weight.data, 1.)
-        nn.init.xavier_uniform(self.final.weight.data, 1.)
+        #nn.init.xavier_uniform(self.final.weight.data, 1.)
 
         self.rbn1 = ResBlockGenerator(nf, nf,
                                       stride=2)
         self.rbn2 = ResBlockGenerator(nf, nf,
                                       stride=2)
-        self.rbn3 = ResBlockGenerator(nf, nf,
-                                      stride=2)
-        self.bn = nn.BatchNorm2d(nf)
+        #self.rbn3 = ResBlockGenerator(nf, nf,
+        #                              stride=2)
+        #self.bn = nn.BatchNorm2d(nf)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
 
 
+        self.dense_b = nn.Linear(self.z_dim, 4 * 4 * nf)
+        self.final_b = nn.Conv2d(nf, channels, 3, stride=1, padding=1)
+        nn.init.xavier_uniform(self.dense_b.weight.data, 1.)
+        nn.init.xavier_uniform(self.final_b.weight.data, 1.)
+
+        self.rbn1_b = ResBlockGenerator(nf, nf,
+                                      stride=2)
+        self.rbn2_b = ResBlockGenerator(nf, nf,
+                                      stride=2)
+        self.rbn3_b = ResBlockGenerator(nf, nf,
+                                      stride=2)
+        self.bn_b = nn.BatchNorm2d(nf)
+
     def forward(self, z):
-        #return self.model(self.dense(z).view(-1, GEN_SIZE, 4, 4))
+        z_in = z * 1.0
+        if self.use_nfl:
+            self.ad.reset()
+        
         x = self.dense(z).view(-1, self.nf, 4, 4)
         if self.use_nfl:
-            x = self.ad(x,True,True)
+            x = self.ad(x,False,True)
         x = self.rbn1(x)
         if self.use_nfl:
-            x = self.ad(x,True,True)
+            x = self.ad(x,False,True)
         x = self.rbn2(x)
         if self.use_nfl:
-            x = self.ad(x,True,True)
-        x = self.rbn3(x)
+            x = self.ad(x,False,True)
+
+        x = self.dense_b(z).view(-1, self.nf, 4, 4)
         if self.use_nfl:
             x = self.ad(x,True,True)
-        x = self.bn(x)
+        x = self.rbn1_b(x)
+        if self.use_nfl:
+            x = self.ad(x,True,True)
+        x = self.rbn2_b(x)
+        if self.use_nfl:
+            x = self.ad(x,True,False)
+
+        x = self.rbn3_b(x)
+        x = self.bn_b(x)
         x = self.relu(x)
-        x = self.final(x)
+        x = self.final_b(x)
         x = self.tanh(x)
         return x

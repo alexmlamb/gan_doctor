@@ -189,6 +189,7 @@ def compute_fid_tf(n_gan_samples,
 
     use_cuda = gan.use_cuda
 
+    import tensorflow as tf
     import tf.fid as tf_fid
     import tensorflow as tf
 
@@ -223,6 +224,7 @@ def compute_is(n_samples,
                batch_size):
 
     import inception_score
+    print('imported inception score')
 
     gen_samples = _extract_samples(gan,
                                    batch_size,
@@ -240,7 +242,7 @@ def compute_is(n_samples,
         splits=10,
         pbar=True
     )
-    #print("PyTorch Inception score: %f +/- %f" % (score_mu, score_std))
+    print("PyTorch Inception score: %f +/- %f" % (score_mu, score_std))
     return {
         'is_mean': np.mean(score_mu),
         'is_std': np.std(score_std)
@@ -250,6 +252,7 @@ def compute_is_tf(n_samples,
                   gan,
                   batch_size):
 
+    import tensorflow as tf
     import tf.inception as tf_inception
     import tensorflow as tf
 

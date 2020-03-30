@@ -49,6 +49,7 @@ class GAN(Base):
         fake = self.g(z)
         d_fake = self.d(fake)
 
+
         if self.loss_name == 'bce':
             gen_loss = bce_loss(d_fake, 1)
         else:

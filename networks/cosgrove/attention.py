@@ -2,16 +2,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sparse_attn import SparseAttention
+from networks.cosgrove.sparse_attn import SparseAttention
 
 class ScaledDotProductAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
-    def __init__(self, temperature):
+    def __init__(self, temperature, dropout=0.1):
         super().__init__()
         self.temperature = temperature
         #self.dropout = nn.Dropout(attn_dropout)
         self.use_sparse = True
+
+        self.dropout = nn.Dropout(dropout)
 
         self.sa = SparseAttention()
 
@@ -33,9 +35,8 @@ class ScaledDotProductAttention(nn.Module):
             sparse_attn = sparse_attn.reshape((mb,ins,outs))
             attn = sparse_attn*1.0
 
-        #attn = self.dropout(F.softmax(attn, dim=-1))
         
-        attn = F.softmax(attn, dim=-1)
+        attn = self.dropout(F.softmax(attn, dim=-1))
 
         output = torch.matmul(attn, v)
 

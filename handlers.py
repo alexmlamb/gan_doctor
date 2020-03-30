@@ -24,12 +24,15 @@ def is_handler(gan,
            kwargs['mode'] == 'train' and \
            kwargs['epoch'] % eval_every == 0:
             gan._eval()
+            use_tf = False
             if not use_tf:
+                print('no tf inception score')
                 with torch.no_grad():
                     return compute_is(n_samples=n_samples,
                                       gan=gan,
                                       batch_size=batch_size)
             else:
+                print('tf inception score')
                 return compute_is_tf(n_samples=n_samples,
                                      gan=gan,
                                      batch_size=batch_size)
@@ -56,6 +59,7 @@ def fid_handler(gan,
 
     # Extract `n_samples` from the training set
     # here.
+    print('computing fid!')
     real_samples = []
     for b, (x_batch, _) in enumerate(loader):
         real_samples.append(x_batch.numpy())
@@ -68,6 +72,8 @@ def fid_handler(gan,
         if kwargs['iter'] == 1 and \
            kwargs['mode'] == 'train' and \
            kwargs['epoch'] % eval_every == 0:
+            print('fid handler!')
+            use_tf = False
             gan._eval()
             if not use_tf:
                 with torch.no_grad():

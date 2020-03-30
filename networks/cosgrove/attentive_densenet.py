@@ -17,7 +17,7 @@ Needs to know beforehand number of channels in each layer.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from attention import ScaledDotProductAttention
+from networks.cosgrove.attention import ScaledDotProductAttention
 import numpy as np
 
 class AttentiveDensenet(nn.Module):
@@ -41,11 +41,13 @@ class AttentiveDensenet(nn.Module):
             self.key_layers.append(nn.Conv2d(ch, key_size*n_heads,1))
             self.query_layers.append(nn.Conv2d(ch, key_size*n_heads,1))
             self.val_layers.append(nn.Conv2d(ch, val_size*n_heads, 1))
-            out_layer = nn.Sequential(nn.Conv2d(val_size*n_heads,ch,1), nn.BatchNorm2d(ch), nn.ReLU(), nn.Conv2d(ch, ch, 1))
-            #out_layer = nn.Conv2d(val_size*n_heads, ch, 1)
+            out_layer = nn.Sequential(nn.Conv2d(ch + val_size*n_heads,ch,3,stride=1,padding=1), nn.BatchNorm2d(ch), nn.ReLU(), nn.Conv2d(ch, ch, 3,stride=1,padding=1))
             self.out_layers.append(out_layer)
             self.gammas.append(nn.Parameter(torch.tensor(0.0)))
-        
+ 
+            for convs in [self.key_layers[-1], self.query_layers[-1], self.val_layers[-1], out_layer[0], out_layer[3]]:
+                nn.init.xavier_uniform(convs.weight.data, 1.)
+
         self.query_layers = nn.ModuleList(self.query_layers)
         self.key_layers = nn.ModuleList(self.key_layers)
         self.val_layers = nn.ModuleList(self.val_layers)
@@ -124,6 +126,8 @@ class AttentiveDensenet(nn.Module):
         att_out,iatt = self.attn(query, keys_tensor, vals_tensor)
 
         att_out = att_out.reshape((sz_b, h, w, self.n_heads, self.val_size)).permute(0,3,4,1,2).reshape((sz_b, self.n_heads*self.val_size, h, w))
+
+        att_out = torch.cat([att_out, x], dim=1)
 
         #print('att out shape', att_out.shape)
         att_out = self.out_layers[self.layer_index](att_out)
